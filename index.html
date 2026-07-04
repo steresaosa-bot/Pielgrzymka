@@ -117,23 +117,63 @@ const songs = [
 let songItems = [];
 let lastQuery = '';
 
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
+async function fetchSongFile(file) {
+  try {
+    const res = await fetch(encodeURI(file));
+    if (res.ok) return { data: await res.text(), file };
+  } catch (e) {
+    // ignore and try fallback
+  }
+
+  if (file.toLowerCase().endsWith('.md')) {
+    const htmlFile = file.replace(/\.md$/i, '.html');
+    try {
+      const res2 = await fetch(encodeURI(htmlFile));
+      if (res2.ok) return { data: await res2.text(), file: htmlFile };
+    } catch (e) {
+      // ignore fallback failure
+    }
+  }
+
+  throw new Error(`File not found: ${file}`);
+}
+
+function parseSongData(data, file) {
+  const isHtml = file.toLowerCase().endsWith('.html');
+
+  if (isHtml) {
+    const cleaned = data
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '');
+    const titleMatch = cleaned.match(/<h1[^>]*>(.*?)<\/h1>/i) || cleaned.match(/<title[^>]*>(.*?)<\/title>/i);
+    const title = titleMatch ? titleMatch[1].trim() : file.replace(/\.html$/i, '');
+    const body = stripHtml(cleaned).replace(/\r?\n\s*\r?\n/g, '\n\n').trim();
+    return { title, body };
+  }
+
+  const parts = data.split('---');
+  const body = parts.length > 2 ? parts.slice(2).join('---') : data;
+  const titleMatch = data.match(/title:\s*(.*)/i);
+  let title = titleMatch ? titleMatch[1].trim() : null;
+  if (!title) {
+    const lines = data.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length) title = lines[0].replace(/^#\s+/, '').trim();
+  }
+  return { title: title || file.replace(/\.md$/i, ''), body: body.trim() };
+}
+
 async function loadAllSongs() {
   const list = await Promise.all(songs.map(async (file) => {
     try {
-      const res = await fetch(encodeURI(file));
-      const data = await res.text();
-
-      const parts = data.split("---");
-      const body = parts.length > 1 ? parts[2] : data;
-
-      const titleMatch = data.match(/title:\s*(.*)/i);
-      let title = titleMatch ? titleMatch[1].trim() : null;
-      if (!title) {
-        const lines = data.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        if (lines.length) title = lines[0].replace(/^#\s+/, '').trim();
-      }
-
-      return { file, title: title || file.replace(/\.md$/i, ''), body: body.trim() };
+      const { data, file: actualFile } = await fetchSongFile(file);
+      const parsed = parseSongData(data, actualFile);
+      return { file: actualFile, title: parsed.title, body: parsed.body };
     } catch (e) {
       return { file, title: file.replace(/\.md$/i, ''), body: '' };
     }
@@ -228,17 +268,11 @@ function loadSongFromCache(fileName) {
 
 async function loadSong(fileName) {
   try {
-    const res = await fetch(encodeURI(fileName));
-    const data = await res.text();
+    const { data, file: actualFile } = await fetchSongFile(fileName);
+    const parsed = parseSongData(data, actualFile);
 
-    const parts = data.split("---");
-    const body = parts.length > 1 ? parts[2] : data;
-
-    const titleMatch = data.match(/title:\s*(.*)/i);
-    const title = titleMatch ? titleMatch[1] : fileName.replace(/\.md$/i, "");
-
-    document.getElementById("title").textContent = title;
-    document.getElementById("text").innerHTML = highlightText(body.trim(), lastQuery);
+    document.getElementById("title").textContent = parsed.title;
+    document.getElementById("text").innerHTML = highlightText(parsed.body, lastQuery);
 
     document.getElementById("listView").style.display = "none";
     document.getElementById("songView").style.display = "block";
