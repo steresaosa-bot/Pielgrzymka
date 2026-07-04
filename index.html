@@ -14,16 +14,22 @@
     .container { max-width:700px; margin:auto; padding:15px; }
 
     .song {
-      background: transparent;
-      padding:12px 6px;
-      border-radius:0;
+      background: #fff;
+      padding:12px 14px;
+      border-radius: 10px;
       cursor:pointer;
-      box-shadow:none;
-      border: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      border: 1px solid rgba(0,0,0,0.08);
       width: 100%;
       text-align: left;
       font-size: 1rem;
-      border-bottom: 1px solid rgba(0,0,0,0.08);
+      margin-bottom: 10px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .song:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.12);
     }
 
     .letterHeader {
@@ -32,6 +38,65 @@
       color: #444;
       background: transparent;
       border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+
+    .topBar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    #searchInput {
+      flex: 1 1 100%;
+      min-width: 200px;
+    }
+
+    .searchActions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      width: 100%;
+      align-items: center;
+    }
+
+    .controlBtn {
+      padding:8px 12px;
+      border-radius:6px;
+      border:1px solid #999;
+      background:#fff;
+      color:#333;
+      cursor:pointer;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      min-width: 110px;
+    }
+
+    .controlBtn:hover {
+      background:#f0f0f0;
+    }
+
+    .actionBtn {
+      background:#2c3e50;
+      color:#fff;
+      border-color:#2c3e50;
+    }
+
+    .actionBtn:hover {
+      background:#24313f;
+    }
+
+    .secondaryBtn {
+      background:#28a745;
+      color:#fff;
+      border-color:#28a745;
+    }
+
+    .secondaryBtn:hover {
+      background:#1f7c38;
+    }
+
+    .topBar input[type="range"] {
+      width: 110px;
     }
 
 
@@ -73,16 +138,18 @@
 
 <div class="container">
 
-  <div id="searchBar" style="margin-bottom:8px; display:flex; gap:8px; align-items:center;">
-    <input id="searchInput" placeholder="Szukaj tekstu w utworach..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;" />
-    <button id="searchBtn" style="padding:8px 12px;border-radius:6px;border:1px solid #2c3e50;background:#2c3e50;color:#fff;">Szukaj</button>
-    <button id="clearBtn" style="padding:8px 12px;border-radius:6px;border:1px solid #999;background:#fff;color:#333;">Wyczyść</button>
-    <button id="themeBtn" title="Tryb nocny/dzienny" style="padding:8px 10px;border-radius:6px;border:1px solid #999;background:#fff;color:#333;">Noc/Dzień</button>
-    <div id="fontControl" style="display:flex;align-items:center;gap:6px;padding-left:6px;">
-      <input id="fontSlider" type="range" min="14" max="28" value="16" style="width:110px;" />
-      <span id="fontSizeLabel" style="min-width:36px;text-align:center;">16px</span>
+  <div id="searchBar" class="topBar" style="margin-bottom:8px; display:flex; flex-direction:column;">
+    <input id="searchInput" placeholder="Szukaj tekstu w utworach..." style="flex:1;padding:10px;border-radius:10px;border:1px solid #ccc;" />
+    <div class="searchActions">
+      <button id="searchBtn" class="controlBtn actionBtn">Szukaj</button>
+      <button id="clearBtn" class="controlBtn">Wyczyść</button>
+      <button id="themeBtn" title="Tryb nocny/dzienny" class="controlBtn">Noc/Dzień</button>
+      <div id="fontControl" style="display:flex;align-items:center;gap:6px;">
+        <input id="fontSlider" type="range" min="14" max="28" value="16" />
+        <span id="fontSizeLabel" style="min-width:36px;text-align:center;">16px</span>
+      </div>
+      <button id="installBtn" class="controlBtn secondaryBtn" style="display:none;">Zainstaluj</button>
     </div>
-    <button id="installBtn" style="padding:8px 10px;border-radius:6px;border:1px solid #28a745;background:#28a745;color:#fff;display:none;">Zainstaluj</button>
   </div>
 
   <div id="alphaIndex" style="margin-bottom:8px; font-size:0.95rem; color:#333; display:flex; gap:6px; flex-wrap:wrap;"></div>
@@ -114,6 +181,7 @@ const songs = [
   "Z dawna Polski Tyś Królową.md",
   "zdrowaś.md"
 ];
+
 let songItems = [];
 let lastQuery = '';
 

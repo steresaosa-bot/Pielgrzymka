@@ -17,7 +17,21 @@ const URLS_TO_CACHE = [
   'uczyńcie.md',
   'weź.md',
   'Z dawna Polski Tyś Królową.md',
-  'zdrowaś.md'
+  'zdrowaś.md',
+  'barka.html',
+  'cześć.html',
+  'gwiazdo.html',
+  'idźmy.html',
+  'jasnogórska.html',
+  'Krolowej.html',
+  'kto.html',
+  'matko.html',
+  'pod.html',
+  'serdeczna matko.html',
+  'uczyńcie.html',
+  'weź.html',
+  'Z dawna Polski Tyś Królową.html',
+  'zdrowaś.html'
 ];
 
 self.addEventListener('install', (event) => {
