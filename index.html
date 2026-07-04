@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Śpiewnik</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#2c3e50">
+
+  <style>
+    body { font-family: Arial; margin: 0; background: #f4f4f4; }
+    header { background:#2c3e50; color:white; padding:15px; text-align:center; }
+
+    .container { max-width:700px; margin:auto; padding:15px; }
+
+    .song {
+      background: transparent;
+      padding:12px 6px;
+      border-radius:0;
+      cursor:pointer;
+      box-shadow:none;
+      border: none;
+      width: 100%;
+      text-align: left;
+      font-size: 1rem;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+
+    .letterHeader {
+      padding: 8px 6px 4px 6px;
+      font-weight: 700;
+      color: #444;
+      background: transparent;
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+
+
+    body.night { background: #111; color: #eee; }
+    body.night header { background: #000; }
+    body.night .song { background: transparent; color: #eee; border-bottom: 1px solid rgba(255,255,255,0.06); }
+
+    body.night .letterHeader { color: #ccc; border-bottom: 1px solid rgba(255,255,255,0.03); }
+
+    body.large-font { font-size: 1.25rem; }
+
+    mark.highlight { background: #ffea70; color: #000; padding: 0 2px; border-radius: 2px; }
+
+    .lyrics { 
+      display:none;
+      background: transparent;
+      color: inherit;
+      padding:8px 0;
+      border-radius:0;
+      white-space:pre-line;
+    }
+
+    .back {
+      color:blue;
+      cursor:pointer;
+      margin-bottom:10px;
+      display:inline-block;
+    }
+
+    body.night .lyrics { background: transparent; color: inherit; border: none; }
+    body.night .back { color: #9ecbff; }
+    body.night mark.highlight { background: #ffea70; color: #000; }
+  </style>
+</head>
+
+<body>
+
+<header>🎵 Śpiewnik Pielgrzymkowy</header>
+
+<div class="container">
+
+  <div id="searchBar" style="margin-bottom:8px; display:flex; gap:8px; align-items:center;">
+    <input id="searchInput" placeholder="Szukaj tekstu w utworach..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;" />
+    <button id="searchBtn" style="padding:8px 12px;border-radius:6px;border:1px solid #2c3e50;background:#2c3e50;color:#fff;">Szukaj</button>
+    <button id="clearBtn" style="padding:8px 12px;border-radius:6px;border:1px solid #999;background:#fff;color:#333;">Wyczyść</button>
+    <button id="themeBtn" title="Tryb nocny/dzienny" style="padding:8px 10px;border-radius:6px;border:1px solid #999;background:#fff;color:#333;">Noc/Dzień</button>
+    <div id="fontControl" style="display:flex;align-items:center;gap:6px;padding-left:6px;">
+      <input id="fontSlider" type="range" min="14" max="28" value="16" style="width:110px;" />
+      <span id="fontSizeLabel" style="min-width:36px;text-align:center;">16px</span>
+    </div>
+    <button id="installBtn" style="padding:8px 10px;border-radius:6px;border:1px solid #28a745;background:#28a745;color:#fff;display:none;">Zainstaluj</button>
+  </div>
+
+  <div id="alphaIndex" style="margin-bottom:8px; font-size:0.95rem; color:#333; display:flex; gap:6px; flex-wrap:wrap;"></div>
+
+  <div id="listView"></div>
+
+  <div id="songView" class="lyrics">
+    <div class="back" onclick="showList()">← Powrót</div>
+    <h2 id="title"></h2>
+    <div id="text"></div>
+  </div>
+
+</div>
+
+<script>
+const songs = [
+  "barka.md",
+  "cześć.md",
+  "gwiazdo.md",
+  "idźmy.md",
+  "jasnogórska.md",
+  "Krolowej.md",
+  "kto.md",
+  "matko.md",
+  "pod.md",
+  "serdeczna matko.md",
+  "uczyńcie.md",
+  "weź.md",
+  "Z dawna Polski Tyś Królową.md",
+  "zdrowaś.md"
+];
+let songItems = [];
+let lastQuery = '';
+
+async function loadAllSongs() {
+  const list = await Promise.all(songs.map(async (file) => {
+    try {
+      const res = await fetch(encodeURI(file));
+      const data = await res.text();
+
+      const parts = data.split("---");
+      const body = parts.length > 1 ? parts[2] : data;
+
+      const titleMatch = data.match(/title:\s*(.*)/i);
+      let title = titleMatch ? titleMatch[1].trim() : null;
+      if (!title) {
+        const lines = data.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length) title = lines[0].replace(/^#\s+/, '').trim();
+      }
+
+      return { file, title: title || file.replace(/\.md$/i, ''), body: body.trim() };
+    } catch (e) {
+      return { file, title: file.replace(/\.md$/i, ''), body: '' };
+    }
+  }));
+
+  songItems = list;
+}
+
+function renderList(filter = '', startsWith = false, doHighlight = true) {
+  // only set lastQuery when highlighting is enabled
+  if (doHighlight) lastQuery = filter || '';
+  const listView = document.getElementById('listView');
+  listView.innerHTML = '';
+
+  const q = (filter || '').toLowerCase().trim();
+
+  const items = songItems
+    .filter(i => {
+      if (!q) return true;
+      if (startsWith) {
+        return i.title && i.title.toLocaleLowerCase('pl-PL').startsWith(q.toLocaleLowerCase('pl-PL'));
+      }
+      return (i.title && i.title.toLowerCase().includes(q)) || (i.body && i.body.toLowerCase().includes(q));
+    })
+    .sort((a, b) => a.title.localeCompare(b.title, 'pl', { sensitivity: 'base' }));
+
+  items.forEach(item => {
+    // insert letter header when first letter changes
+    const first = (item.title || '').trim().charAt(0).toLocaleUpperCase('pl-PL') || '';
+    if (!listView._lastLetter) listView._lastLetter = '';
+    if (first && first !== listView._lastLetter) {
+      const h = document.createElement('div');
+      h.className = 'letterHeader';
+      h.textContent = first;
+      listView.appendChild(h);
+      listView._lastLetter = first;
+    }
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'song';
+    btn.innerHTML = highlightText(item.title, doHighlight ? filter : '');
+    btn.addEventListener('click', () => loadSongFromCache(item.file));
+    listView.appendChild(btn);
+  });
+
+  if (items.length === 0) {
+    const p = document.createElement('div');
+    p.textContent = 'Brak dopasowań';
+    p.style.padding = '12px';
+    listView.appendChild(p);
+  }
+}
+
+function renderAlphaIndex() {
+  const idx = document.getElementById('alphaIndex');
+  idx.innerHTML = '';
+  const letters = new Set();
+  songItems.forEach(i => {
+    if (!i.title) return;
+    const first = i.title.trim().charAt(0).toLocaleUpperCase('pl-PL');
+    if (first) letters.add(first);
+  });
+  const arr = Array.from(letters).sort((a, b) => a.localeCompare(b, 'pl', { sensitivity: 'base' }));
+
+  const allBtn = document.createElement('button');
+  allBtn.type = 'button';
+  allBtn.textContent = 'Wszystkie';
+  allBtn.style.padding = '4px 8px';
+  allBtn.addEventListener('click', () => { document.getElementById('searchInput').value = ''; renderList('', false, false); });
+  idx.appendChild(allBtn);
+
+  arr.forEach(letter => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = letter;
+    b.style.padding = '4px 8px';
+    b.addEventListener('click', () => { document.getElementById('searchInput').value = letter; renderList(letter, true, false); });
+    idx.appendChild(b);
+  });
+}
+
+function loadSongFromCache(fileName) {
+  const item = songItems.find(i => i.file === fileName);
+  if (!item) return loadSong(fileName);
+
+  document.getElementById("title").textContent = item.title;
+  document.getElementById("text").innerHTML = highlightText(item.body, lastQuery);
+
+  document.getElementById("listView").style.display = "none";
+  document.getElementById("songView").style.display = "block";
+}
+
+async function loadSong(fileName) {
+  try {
+    const res = await fetch(encodeURI(fileName));
+    const data = await res.text();
+
+    const parts = data.split("---");
+    const body = parts.length > 1 ? parts[2] : data;
+
+    const titleMatch = data.match(/title:\s*(.*)/i);
+    const title = titleMatch ? titleMatch[1] : fileName.replace(/\.md$/i, "");
+
+    document.getElementById("title").textContent = title;
+    document.getElementById("text").innerHTML = highlightText(body.trim(), lastQuery);
+
+    document.getElementById("listView").style.display = "none";
+    document.getElementById("songView").style.display = "block";
+  } catch (e) {
+    document.getElementById("title").textContent = fileName.replace(/\.md$/i, '');
+    document.getElementById("text").textContent = 'Nie można wczytać pliku.';
+  }
+}
+
+function showList() {
+  document.getElementById("listView").style.display = "block";
+  document.getElementById("songView").style.display = "none";
+}
+
+</script>
+
+<script>
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlightText(raw, query) {
+  if (!query) return escapeHtml(raw).replace(/\n/g, '<br>');
+  const q = query.trim();
+  if (!q) return escapeHtml(raw).replace(/\n/g, '<br>');
+  const escaped = escapeHtml(raw);
+  const re = new RegExp(escapeRegExp(q), 'gi');
+  return escaped.replace(re, (m) => `<mark class="highlight">${m}</mark>`).replace(/\n/g, '<br>');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadAllSongs();
+  renderAlphaIndex();
+  renderList();
+
+  const input = document.getElementById('searchInput');
+  const btn = document.getElementById('searchBtn');
+  const clear = document.getElementById('clearBtn');
+  const theme = document.getElementById('themeBtn');
+  const fontSlider = document.getElementById('fontSlider');
+  const fontLabel = document.getElementById('fontSizeLabel');
+
+  function debounce(fn, ms = 250) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  }
+
+  const doSearch = () => { showList(); renderList(input.value); };
+  const debounced = debounce(doSearch, 200);
+
+  btn.addEventListener('click', () => { showList(); renderList(input.value); });
+  clear.addEventListener('click', () => { input.value = ''; showList(); renderList(''); });
+  input.addEventListener('input', () => debounced());
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { showList(); renderList(input.value); } });
+
+  // Theme toggle
+  const storedTheme = localStorage.getItem('spiewnik_theme');
+  if (storedTheme === 'night') document.body.classList.add('night');
+  theme.addEventListener('click', () => {
+    document.body.classList.toggle('night');
+    localStorage.setItem('spiewnik_theme', document.body.classList.contains('night') ? 'night' : 'day');
+  });
+
+  // Font slider
+  const storedFontSize = localStorage.getItem('spiewnik_fontSize');
+  if (storedFontSize) {
+    document.documentElement.style.fontSize = storedFontSize + 'px';
+    fontSlider.value = storedFontSize;
+    fontLabel.textContent = storedFontSize + 'px';
+  }
+  fontSlider.addEventListener('input', () => {
+    const v = fontSlider.value;
+    document.documentElement.style.fontSize = v + 'px';
+    fontLabel.textContent = v + 'px';
+    localStorage.setItem('spiewnik_fontSize', v);
+  });
+  // PWA install prompt handling
+  let deferredPrompt = null;
+  const installBtn = document.getElementById('installBtn');
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = 'inline-block';
+  });
+  installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    installBtn.style.display = 'none';
+  });
+  // Register service worker for offline support
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('spiewnik-sw.js').then(reg => {
+      console.log('ServiceWorker registered:', reg.scope);
+    }).catch(err => {
+      console.warn('ServiceWorker registration failed:', err);
+    });
+  }
+});
+</script>
+
+</body>
+</html>
