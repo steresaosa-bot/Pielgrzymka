@@ -1,0 +1,13 @@
+---
+title: Pod Twą obronę
+---
+
+1. Pod Twą obronę, Ojcze na niebie,
+Grono Twych dzieci swój powierza los.
+Ty nam błogosław, ratuj w potrzebie,
+I broń od zguby, gdy zagraża cios.
+
+2. Czy toń spokojna, czy huczą fale,
+Gdy Ty Twe dzieci w Swej opiece masz,
+Wznosimy modły dziś ku Twej chwale,
+Boś Ty nam tarczą, Boże Ojcze nasz.
