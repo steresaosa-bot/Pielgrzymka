@@ -61,20 +61,35 @@ self.addEventListener('fetch', (event) => {
 
   // Only handle same-origin requests
   if (url.origin === location.origin) {
-    event.respondWith(
-      caches.match(req).then(cached => {
-        const networkFetch = fetch(req).then(response => {
-          // Update cache in background
-          caches.open(CACHE_NAME).then(cache => cache.put(req, response.clone()));
-          return response;
-        }).catch(() => cached);
+    event.respondWith((async () => {
+      // For navigation requests (page loads) prefer network first so users get
+      // the latest HTML; fall back to cached index.html when offline.
+      if (req.mode === 'navigate') {
+        try {
+          const networkResponse = await fetch(req);
+          // update cache in background
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(req, networkResponse.clone()).catch(() => {});
+          return networkResponse;
+        } catch (err) {
+          const cached = await caches.match('./index.html');
+          if (cached) return cached;
+          return new Response('Offline', { status: 503, statusText: 'Offline' });
+        }
+      }
 
-        // Prefer cached response, fall back to network
-        return cached || networkFetch;
-      }).catch(() => {
-        // If everything fails, and it's a navigation, show index
-        if (req.mode === 'navigate') return caches.match('./index.html');
-      })
-    );
+      // For other requests use cache-first then network
+      try {
+        const cached = await caches.match(req);
+        if (cached) return cached;
+        const response = await fetch(req);
+        // update cache in background
+        caches.open(CACHE_NAME).then(cache => cache.put(req, response.clone())).catch(() => {});
+        return response;
+      } catch (err) {
+        // final fallback for navigations handled above; otherwise undefined
+        return new Response('Offline', { status: 503, statusText: 'Offline' });
+      }
+    })());
   }
 });
