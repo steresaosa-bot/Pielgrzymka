@@ -228,8 +228,19 @@ function parseSongData(data, file) {
 
   const parts = data.split('---');
   const body = parts.length > 2 ? parts.slice(2).join('---') : data;
-  const titleMatch = data.match(/title:\s*(.*)/i);
-  let title = titleMatch ? titleMatch[1].trim() : null;
+  // Try to read YAML frontmatter (between the first pair of ---)
+  let title = null;
+  if (parts.length > 2) {
+    const frontmatter = parts[1];
+    const titleMatch = frontmatter.match(/^\s*title\s*:\s*(.+)\s*$/im);
+    if (titleMatch) {
+      title = titleMatch[1].trim();
+      // strip surrounding quotes if present
+      if ((title.startsWith('"') && title.endsWith('"')) || (title.startsWith("'") && title.endsWith("'"))) {
+        title = title.slice(1, -1).trim();
+      }
+    }
+  }
   if (!title) {
     const lines = data.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     if (lines.length) title = lines[0].replace(/^#\s+/, '').trim();
