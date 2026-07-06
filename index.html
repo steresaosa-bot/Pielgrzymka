@@ -273,6 +273,8 @@ function parseSongData(data, file) {
     for (const line of lines) {
       const candidate = line.replace(/^#+\s*/, '').replace(/<[^>]+>/g, '').trim();
       if (!candidate) continue;
+      // Ignore generic fallback page headers that just point back to the site.
+      if (candidate.toLowerCase().includes('pielgrzymka') && candidate.toLowerCase().includes('https://')) continue;
       title = candidate;
       break;
     }
