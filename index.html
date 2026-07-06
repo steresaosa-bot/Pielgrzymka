@@ -270,7 +270,12 @@ function parseSongData(data, file) {
   }
   if (!title) {
     const lines = data.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    if (lines.length) title = lines[0].replace(/^#\s+/, '').trim();
+    for (const line of lines) {
+      const candidate = line.replace(/^#+\s*/, '').replace(/<[^>]+>/g, '').trim();
+      if (!candidate) continue;
+      title = candidate;
+      break;
+    }
   }
   return { title: title || file.replace(/\.md$/i, ''), body: body.trim() };
 }
