@@ -232,6 +232,12 @@ function stripHtml(html) {
   return tmp.textContent || tmp.innerText || '';
 }
 
+function sanitizeTitle(rawTitle) {
+  if (!rawTitle) return '';
+  const cleaned = rawTitle.replace(/^#+\s*/, '').trim();
+  return stripHtml(cleaned).trim();
+}
+
 async function fetchSongFile(file) {
   try {
     const res = await fetch(encodeURI(file));
@@ -261,7 +267,7 @@ function parseSongData(data, file) {
       .replace(/<script[\s\S]*?<\/script>/gi, '')
       .replace(/<style[\s\S]*?<\/style>/gi, '');
     const titleMatch = cleaned.match(/<h1[^>]*>(.*?)<\/h1>/i) || cleaned.match(/<title[^>]*>(.*?)<\/title>/i);
-    const title = titleMatch ? titleMatch[1].trim() : file.replace(/\.html$/i, '');
+    const title = titleMatch ? sanitizeTitle(titleMatch[1].trim()) : file.replace(/\.html$/i, '');
     const body = stripHtml(cleaned).replace(/\r?\n\s*\r?\n/g, '\n\n').trim();
     return { title, body };
   }
@@ -284,7 +290,7 @@ function parseSongData(data, file) {
   if (!title) {
     const lines = data.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     for (const line of lines) {
-      const candidate = line.replace(/^#+\s*/, '').replace(/<[^>]+>/g, '').trim();
+      const candidate = sanitizeTitle(line);
       if (!candidate) continue;
       // Ignore generic fallback page headers that just point back to the site.
       if (candidate.toLowerCase().includes('pielgrzymka') && candidate.toLowerCase().includes('https://')) continue;
