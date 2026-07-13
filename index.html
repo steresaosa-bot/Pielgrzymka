@@ -241,7 +241,7 @@ function sanitizeTitle(rawTitle) {
 async function fetchSongFile(file) {
   try {
     const res = await fetch(encodeURI(file));
-    if (res.ok) return { data: await res.text(), file, requestedFile: file };
+    if (res.ok) return { data: await res.text(), file };
   } catch (e) {
     // ignore and try fallback
   }
@@ -250,7 +250,7 @@ async function fetchSongFile(file) {
     const htmlFile = file.replace(/\.md$/i, '.html');
     try {
       const res2 = await fetch(encodeURI(htmlFile));
-      if (res2.ok) return { data: await res2.text(), file: htmlFile, requestedFile: file };
+      if (res2.ok) return { data: await res2.text(), file: htmlFile };
     } catch (e) {
       // ignore fallback failure
     }
@@ -263,9 +263,7 @@ function parseSongData(data, file) {
   function isGenericTitle(value) {
     if (!value) return true;
     const cleaned = value.trim().toLowerCase();
-    if (cleaned.includes('pielgrzymka') || cleaned.includes('śpiewnik')) return true;
-    const genericPattern = /^\s*(?:(?:śpiewnik|pielgrzymkowy|pielgrzymka|home|index)(?:[\s\u2013\u2014\-\|:\/\\]+(?:śpiewnik|pielgrzymkowy|pielgrzymka|home|index))*)\s*$/i;
-    return genericPattern.test(cleaned);
+    return /^(?:śpiewnik|pielgrzymkowy|pielgrzymka|home|index)$/i.test(cleaned);
   }
 
   const looksLikeHtml = /<(?:html|!doctype|body|title|h1)[\s>]/i.test(data);
@@ -337,9 +335,9 @@ async function loadAllSongs() {
     try {
       const { data, file: actualFile } = await fetchSongFile(file);
       const parsed = parseSongData(data, actualFile);
-      return { file, actualFile, title: parsed.title, body: parsed.body };
+      return { file: actualFile, title: parsed.title, body: parsed.body };
     } catch (e) {
-      return { file, actualFile: file, title: file.replace(/\.md$/i, ''), body: '' };
+      return { file, title: file.replace(/\.md$/i, ''), body: '' };
     }
   }));
 
